@@ -1,0 +1,78 @@
+#pragma rtGlobals=3		// Use modern global access method and strict wave access.
+//v2 high‘w‚ğ‹üÜ—¦‚ğ”g’·•ªU‚Å
+//v3 low‘w‚àhigh‹üÜ•ªU~‹óE—¦‚Å
+Function Multi_film(w,x) : FitFunc
+	Wave w // w[0]=n_h_a, w[1]=n_h_b, w[2]=n_h_c, w[3]=d_h, w[4]=ƒ_ƒ~[, w[5]=porosity_l, w[6]=n_si@w[7]=window, w[8]=d_l,  w[9]=n_air ‹üÜ—¦‚Í‚Æ‚è‚ ‚¦‚¸’è”‚Å
+	//•ªU‚ ‚è‚Ì‹üÜ—¦‚Æ‚µ‚Än_h=SQRT(w[0]+((w[1]*wavelength^2)/(wavelength^2-w[2])))
+	Variable x
+	
+	Variable/G fai_h, fai_l, r_lh, r_hSi, r_hl, rr_H, rr_L, r_hAir, r_Airh//À”‚Ì•Ï”
+	
+	Variable/G n_h //v2 Sellmeier@model refractive index
+	Variable/G n_l //v3 Sellmeier@model refractive index
+	
+	Variable/G/C  r_H, r_L, r_Hconj, r_Lconj//•¡‘f”‚Ì•Ï”
+	Variable/C/G jj //•¡‘f”‚Ì’è‹`_‚½‚¾‚Ì_i
+	jj=cmplx(0,1)
+	
+	n_h=sqrt(w[0]+((w[1]*x^2)/(x^2-w[2])))
+	n_l=1+((n_h-1)*w[5])
+	
+	fai_h = (2*PI*n_h*w[3])/x
+	fai_l =  (2*PI*n_l*w[8])/x
+	
+	//refrection of light (incident angle 0 dega) at interface 
+	r_lh = (-n_h+n_l)/(n_h+n_l)//refrection from low density area to high density area 
+	r_hSi =  (n_h-w[6])/(n_h+w[6]) //refrection from low density area to Si substrate
+	r_hl = (n_h-n_l)/(n_h+n_l)// refrection from  high density area to low density area
+	r_hAir = (n_h-w[9])/(n_h+w[9])//refrection from  high density area to air
+	r_Airh = (w[9]-n_h)/(n_h+w[9])//refrection from air to high density area
+	
+      //ŒÂ•Ê‚Ì‘w‚ÌŒvZ‚ÍYariv ®(4.9-11)‚É‚æ‚éB“™‰¿ƒ~ƒ‰[‚Å‘w‚ğd‚Ë‚½B
+      r_H = (r_lh+r_hSi*Exp(-jj*2*fai_h))/(1-r_hl*r_hSi*Exp(-jj*2*fai_h))
+	r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+      r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))//5
+	r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))//5
+	r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	//r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	//r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))//10
+	//r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))//10
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	//r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	//r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	//r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	//r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))//15
+	//r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))//15
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))//16
+	//r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))//16
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))//17
+	//r_L =  (r_hl+r_H*Exp(-jj*2*fai_l))/(1-r_lh*r_H*Exp(-jj*2*fai_l))//17
+
+	//r_H = (r_lh+r_L *Exp(-jj*2*fai_h))/(1-r_hl*r_L *Exp(-jj*2*fai_h))
+	
+	r_H = (r_Airh+r_L *Exp(-jj*2*fai_h))/(1-r_hAir*r_L *Exp(-jj*2*fai_h))//air  16‘w–Ú
+	
+	r_Hconj = conj(r_H)+w[4]//w[2]‚ª–³‚­‚ÄƒGƒ‰[‚É‚È‚é‚Ì‚Å
+	rr_H = w[7]*real(r_H*r_Hconj)//U•‚ğ‹­“x‚É•ÏŠ·A‘‹‚ÌŒ¸Š‚ğl—¶
+	//r_Lconj = conj(r_L)
+	//rr_L = w[5]*real(r_L*r_Lconj)
+	
+return rr_H
+//return n_h
+End
