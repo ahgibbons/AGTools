@@ -15,15 +15,19 @@ from math import pi as PI
 from numpy.linalg import det,matrix_power
 from scipy.optimize import curve_fit
 import pandas as pd
+import os.path as path
+
+import Sivaniah.Spectrometer.parseSpectral as PS
 
 ## Params: Sellmeier A, Sellmeier B, Sellmeier C, d_h, dummy, porosity, n_si,
 ##         dummy(window), d_l, n_air
+
 
 ps_params = {'A': 1, 'B': 1.4435, 'C': 20216}
 si_params = {'A': 1, 'B': 10.668, 'C': 90912}
 n_air = 1
 n_si = 3.67
-df_si = pd.read_csv("Si.txt",header=0,sep='\t')
+df_si = pd.read_csv(path.join(path.split(__file__)[0],"Si.txt"),header=0,sep='\t')
 
 ## filmetrics.com / Silicon
 
@@ -31,12 +35,21 @@ df_si = pd.read_csv("Si.txt",header=0,sep='\t')
 params = [1,1.4435,20216,100,0,0.25,3.67,1,100,1]
 wavelengths = np.linspace(200,1000,1000)
 
+spec_file = open(r"C:\Users\andrew\Dropbox\Spectrometer\Andrew_spectraldata\20170418_PS\samples.csv",'r')
+spec_data = PS.genSpecData(spec_file.read())
+ps_spec = spec_data[1]
+
+def sellmeierEqn(A,B,C,w):
+    n = np.sqrt(A + ((B * w**2) / (w**2 - C)))
+    return n
+
 class SellmeierLayer:
-    def __init__(self, mat_params, thickness):
+    def __init__(self, mat_params, thickness, name=None):
         self.A = mat_params['A']
         self.B = mat_params['B']
         self.C = mat_params['C']
         self.thickness = thickness
+        self.name = name
         
         
     def matrix(self,w):
@@ -50,25 +63,31 @@ class SellmeierLayer:
         return M
     
 class DataFrameLayer:
-    def __init__(self, material_dataframe, thickness):
+    def __init__(self, material_dataframe, thickness, name=None):
         self.dataframe = material_dataframe
         self.thickness = thickness
+        self.name = name
         
     def matrix(self,w):
-        n = np.interp(w,self.dataframe['Wavelength(nm)'],self.dataframe['n'])
+        n_real = np.interp(w,self.dataframe['Wavelength(nm)'],self.dataframe['n'])
+        n_imag = np.interp(w,self.dataframe['Wavelength(nm)'],self.dataframe['k'])
+        n = n_real + 1j*n_imag
         k = 2*PI*n / w
         theta = k*self.thickness
         
         M = np.array([[np.cos(theta), 1j*np.sin(theta)/n],
                         [1j*n*np.sin(theta), np.cos(theta)]])
     
+        return M
+    
 class PorousLayer:
-    def __init__(self, mat_params, porosity, thickness):
+    def __init__(self, mat_params, porosity, thickness, name = None):
         self.A = mat_params['A']
         self.B = mat_params['B']
         self.C = mat_params['C']
         self.porosity = porosity
         self.thickness = thickness
+        self.name = name
 
     def matrix(self,w):
         nh = np.sqrt(self.A + ((self.B * w**2) / (w**2 - self.C)))
@@ -82,9 +101,10 @@ class PorousLayer:
         return M
 
 class SimpleLayer:
-    def __init__(self, refractive_index, thickness):
+    def __init__(self, refractive_index, thickness, name = None):
         self.refractive_index = refractive_index
         self.thickness = thickness
+        self.name = name
         
     def matrix(self,w):
         k = 2*PI*self.refractive_index / w
@@ -99,7 +119,13 @@ def curve_diff(ys1,ys2): ## Two curves of equal length with same xs domain
     diff = ys1 - ys2
     diffsq = diff * diff
     return sum(diffsq)
-    
+
+def thin_film(ws,mat_params,thickness,substrate_df):
+    layer = [SellmeierLayer(mat_params,thickness)]
+    rs = [gen_multilayer_matrix_df_substrate(w,layer,n_air,substrate_df) for
+          w in ws]
+    return rs
+
 def gen_multilayer_matrix(w,layers,n_Left,right_params):
     BLinv = 0.5*np.array([[1,-1/n_Left],[1,1/n_Left]])
     A = right_params['A']
@@ -120,11 +146,29 @@ def gen_multilayer_matrix(w,layers,n_Left,right_params):
     
     return (r * r.conj()).real
 
+def fit_porous_film_thickness(ws,ys,mat_params,porosity,df_sub,
+                              nlayers,t0,t1):
+    def fit_func(xs,t0,t1):
+       layer_ps = SellmeierLayer(mat_params,t0)
+       layer_pore = PorousLayer(mat_params,porosity,t1)
+       layers = [layer_ps,layer_pore]*nlayers + [layer_ps]
+       rs = [gen_multilayer_matrix_df_substrate(x,layers,n_air,df_sub) for
+             x in xs]
+       return rs
+   
+    a = curve_fit(fit_func,ws,ys,[t0,t1])
+    ys_fit = fit_func(ws,a[0][0],a[0][1])
+    
+    return (a, ys_fit)
+       
+
 def gen_multilayer_matrix_df_substrate(w,layers,n_Left,df_right):
     n_Right = np.interp(w,df_right['Wavelength(nm)'],df_right['n'])
+    k_Right = np.interp(w,df_right['Wavelength(nm)'],df_right['k'])
+    ncomp_Right = n_Right + 1j*k_Right
     
     BLinv = 0.5*np.array([[1,-1/n_Left],[1,1/n_Left]])
-    BR = np.array([[1,1],[-1*n_Right,n_Right]])
+    BR = np.array([[1,1],[-1*ncomp_Right,ncomp_Right]])
     
     MT = BLinv
     
@@ -154,18 +198,60 @@ def gen_multilayer_matrix_fixed_substrate(w,layers,n_Left,n_Right):
     
     return (r * r.conj()).real
     
-def cos_layer(ws,mat_params,porosity,d1,d2,nlayers,n_Left,n_Right):
+def Rayleight_Scattering(w,d,n,distance,scatter_angle=0):
+    I1 = (1 + (np.cos(scatter_angle))**2)/(2*distance**2)
+    I2 = np.power(2*PI/w,4)*(n**2 -1)**2/(n**2+2)**2*(d/2)**6
+    return I1*I2
+
+def cos_layer(ws,mat_params,porosity,d1,d2,nlayers,n_Left,df_Right):
     layerSolid = SellmeierLayer(mat_params,d1)
     layerPorous = PorousLayer(mat_params,porosity,d2)
     layers = [layerSolid,layerPorous]*nlayers + [layerSolid]
     
-    rs = np.array([gen_multilayer_matrix(w,layers,n_Left,n_Right) for w in ws])
+    rs = np.array([gen_multilayer_matrix_df_substrate(w,layers,n_Left,df_Right) for w in ws])
     return rs
 
 def cos_layer_fitter(ws,porosity,d1,d2):
     return cos_layer(ws,ps_params,porosity,d1,d2,5,n_air,n_si)
 
+def cos_5layer_fitter(ws,t0,t1,t2,t3,t4,t5,t6,p1,p3,p5):
+    layer0 = SellmeierLayer(ps_params,t0)
+    layer2 = SellmeierLayer(ps_params,t2)
+    layer4 = SellmeierLayer(ps_params,t4)
+    layer6 = SellmeierLayer(ps_params,t6)
+    player1 = PorousLayer(ps_params,p1,t1)
+    player3 = PorousLayer(ps_params,p3,t3)
+    player5 = PorousLayer(ps_params,p5,t5)
     
+    layers = [layer0,player1,layer2,player3,layer4,player5,layer6]
+    
+    rs = [gen_multilayer_matrix_df_substrate(w,layers,n_air,df_si) for w in ws]
+    return rs
+    
+def cos_4layer_fitter(ws,t0,t1,t2,t3,t4,t5,t6,t7,t8,p1,p3,p5,p7):
+    layer0 = SellmeierLayer(ps_params,t0)
+    layer2 = SellmeierLayer(ps_params,t2)
+    layer4 = SellmeierLayer(ps_params,t4)
+    layer6 = SellmeierLayer(ps_params,t6)
+    layer8 = SellmeierLayer(ps_params,t7)
+    player1 = PorousLayer(ps_params,p1,t1)
+    player3 = PorousLayer(ps_params,p3,t3)
+    player5 = PorousLayer(ps_params,p5,t5)
+    player7 = PorousLayer(ps_params,p7,t7)
+    
+    layers = [layer0,player1,layer2,player3,layer4,player5,layer6,player7,layer8]
+    
+    rs = [gen_multilayer_matrix_df_substrate(w,layers,n_air,df_si) for w in ws]
+    return rs
+    
+def bilayer_fitter(ws,t0,t1,p):
+    layer0 = SellmeierLayer(ps_params,t0)
+    layer1 = PorousLayer(ps_params,p,t1)
+    layers = [layer0,layer1]*4 + [layer0]
+    
+    rs = [gen_multilayer_matrix_df_substrate(w,layers,n_air,df_si) for w in ws]
+    return rs
+
 def multilayer_matrix(n1,n2,L1,L2,nlayers,w):
     B0inv = 0.5*np.array([[1,-1],[1,1]])
     Bsub  = np.array([[1,1],[-1*n_si,n_si]])
