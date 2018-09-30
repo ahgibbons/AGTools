@@ -18,33 +18,41 @@ import pandas as pd
 import os.path as path
 
 import Sivaniah.Spectrometer.parseSpectral as PS
+from Sivaniah.Optics.MaterialParams import ps_params, si_params, n_air, n_si, df_si
 
-## Params: Sellmeier A, Sellmeier B, Sellmeier C, d_h, dummy, porosity, n_si,
-##         dummy(window), d_l, n_air
-
-
-ps_params = {'A': 1, 'B': 1.4435, 'C': 20216}
-si_params = {'A': 1, 'B': 10.668, 'C': 90912}
-n_air = 1
-n_si = 3.67
-df_si = pd.read_csv(path.join(path.split(__file__)[0],"Si.txt"),header=0,sep='\t')
-
-## filmetrics.com / Silicon
 
 
 params = [1,1.4435,20216,100,0,0.25,3.67,1,100,1]
 wavelengths = np.linspace(200,1000,1000)
 
-spec_file = open(r"C:\Users\andrew\Dropbox\Spectrometer\Andrew_spectraldata\20170418_PS\samples.csv",'r')
-spec_data = PS.genSpecData(spec_file.read())
-ps_spec = spec_data[1]
+#spec_file = open(r"C:\Users\andrew\Dropbox\Spectrometer\Andrew_spectraldata\20170418_PS\samples.csv",'r')
+#spec_data = PS.genSpecData(spec_file.read())
+#ps_spec = spec_data[1]
+
+class SellmeierMedium:
+    def __init__(self, params):
+        self.params = params
+        self.A = params['A']
+        self.B = params['B']
+        self.C = params['C']     
+        
+    def n(self,w):
+        return np.sqrt(self.A + ((self.B * w**2) / (w**2 - self.C)))
+
 
 def sellmeierEqn(A,B,C,w):
     n = np.sqrt(A + ((B * w**2) / (w**2 - C)))
     return n
 
+def cauchyEqn(A,B,C,ws):
+    ws2 = ws/1000
+    return A + B/np.power(ws2,2) + C/np.power(ws2,4)
+
 class SellmeierLayer:
     def __init__(self, mat_params, thickness, name=None):
+        """
+        SellmeierLayer(mat_params, thickness, name=None)
+        """
         self.A = mat_params['A']
         self.B = mat_params['B']
         self.C = mat_params['C']
@@ -53,6 +61,10 @@ class SellmeierLayer:
         
         
     def matrix(self,w):
+        """
+        matrix(w)
+        Generate transmission matrix for layer for wavelength w
+        """
         n = np.sqrt(self.A + ((self.B * w**2) / (w**2 - self.C)))
         
         k = 2*PI*n / w
@@ -101,10 +113,21 @@ class PorousLayer:
         return M
 
 class SimpleLayer:
+    """
+    SimpleLayer(refractive_index, thickness, name = None)
+    Simple layer with constant refractive index.
+    """
     def __init__(self, refractive_index, thickness, name = None):
+        """
+        SimpleLayer(refractive_index, thickness, name = None)
+        Simple layer with constant refractive index.
+        """
         self.refractive_index = refractive_index
         self.thickness = thickness
         self.name = name
+
+    def __repr__(self):
+        return "<SimpleLayer: n = {:.03f},  t = {:.03f}>".format(self.refractive_index, self.thickness)
         
     def matrix(self,w):
         k = 2*PI*self.refractive_index / w
@@ -182,7 +205,7 @@ def gen_multilayer_matrix_df_substrate(w,layers,n_Left,df_right):
     
     return (r * r.conj()).real
 
-def gen_multilayer_matrix_fixed_substrate(w,layers,n_Left,n_Right):
+def gen_multilayer_matrix_fixed_substrate_reflectance(w,layers,n_Left,n_Right):
     BLinv = 0.5*np.array([[1,-1/n_Left],[1,1/n_Left]])
     BR = np.array([[1,1],[-1*n_Right,n_Right]])
     
@@ -197,8 +220,28 @@ def gen_multilayer_matrix_fixed_substrate(w,layers,n_Left,n_Right):
     r = MT[1][0] / MT[0][0]
     
     return (r * r.conj()).real
+
+def gen_multilayer_matrix_fixed_substrate(w,layers,n_Left,n_Right):
+    BLinv = 0.5*np.array([[1,-1/n_Left],[1,1/n_Left]])
+    BR = np.array([[1,1],[-1*n_Right,n_Right]])
     
-def Rayleight_Scattering(w,d,n,distance,scatter_angle=0):
+    MT = BLinv
+    
+    for layer in layers:
+        m = layer.matrix(w)
+        MT = MT @ m
+    
+    MT = MT @ BR
+    
+    r = MT[1][0] / MT[0][0]
+    t = 1 / MT[0][0]
+
+    R = (r * r.conj()).real
+    T = (t * t.conj()).real
+    
+    return (R,T)
+    
+def Rayleigh_Scattering(w,d,n,distance,scatter_angle=0):
     I1 = (1 + (np.cos(scatter_angle))**2)/(2*distance**2)
     I2 = np.power(2*PI/w,4)*(n**2 -1)**2/(n**2+2)**2*(d/2)**6
     return I1*I2
