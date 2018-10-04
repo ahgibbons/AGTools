@@ -17,8 +17,8 @@ from scipy.optimize import curve_fit
 import pandas as pd
 import os.path as path
 
-import Sivaniah.Spectrometer.parseSpectral as PS
-from Sivaniah.Optics.MaterialParams import ps_params, si_params, n_air, n_si, df_si
+import AGTools.Spectrometer.parseSpectral as PS
+from AGTools.Optics.MaterialParams import ps_params, si_params, n_air, n_si, df_si
 
 
 
