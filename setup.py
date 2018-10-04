@@ -1,7 +1,8 @@
 
 from distutils.core import setup
 
-setup(name="Sivaniah",
+setup(name="AGTools",
 	version="1.0",
 	author="Andrew H Gibbons",
-	author_email="andrew.h.gibbons@gmail.com")
+	author_email="andrew.h.gibbons@gmail.com",
+	packages=['AGTools','AGTools.Optics'])

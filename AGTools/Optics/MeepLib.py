@@ -18,7 +18,7 @@ def geo1D_thin_film_si(film_n, si_n, ps_thickness, si_thickness, pos=0, bare_sub
 
 def geo2D_sphereical_pc(n_matrix, n_substrate, film_thickness, film_height,
                         substrate_thickness, n_layers, substrate_base,
-                        sph_radius, sph_spacing, layer_offset)
+                        sph_radius, sph_spacing, layer_offset):
     """
     Generate a layered structure with spheres. Within a layer the spheres are hexagonally packed
     """
@@ -32,7 +32,9 @@ def geo2D_sphereical_pc(n_matrix, n_substrate, film_thickness, film_height,
 
     for n in range(n_layers):
         x = substrate_base + substrate_thickness + film_thickness*(1/6 + n*3)
-        sphere_layer = [mp.Sphere(radius=sph_radius, center =  
+        sphere_layer = []
+
+    return [] 
     
     
 class SimParams:
