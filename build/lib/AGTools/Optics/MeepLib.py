@@ -17,25 +17,63 @@ def geo1D_thin_film_si(film_n, si_n, ps_thickness, si_thickness, pos=0, bare_sub
     
     return geometry
 
-def geo2D_spherical_pc(n_matrix, n_substrate, film_thickness, film_height,
-                        substrate_thickness, n_layers, substrate_base,
+def geo2D_thin_film(n_matrix, film_thickness, film_height,
+                    film_base_pos):
+    
+    matrix_block = mp.Block(size=mp.Vector3(film_thickness, film_height, 1e20),
+                            center = mp.Vector3(film_base_pos - film_thickness/2, 0, 0),
+                            material = mp.Medium(epsilon = n_matrix**2))
+
+    return [matrix_block]
+
+def geo2D_photonic_crystal(n_matrix, n_other, film_thickness, film_height, si_thickness, n_si,
+                           n_layers, film_base, layer_d):
+    """
+    Generate a layered structure with alternating layers. Design is to make equivalent structure to 
+    'geo2D_spherical_pc'. 
+    """
+
+    matrix_block = mp.Block(size=mp.Vector3(film_thickness, film_height, 1e20),
+                            center = mp.Vector3(film_base-film_thickness/2),
+                            material = mp.Medium(epsilon = n_matrix**2))
+
+    si_block = mp.Block(size=mp.Vector3(si_thickness, film_height, 1e20),
+                        center = mp.Vector3(film_base+si_thickness/2),
+                        material = mp.Medium(epsilon = n_si**2))
+
+    layers = [si_block, matrix_block]
+
+    for n in range(n_layers):
+        x = film_base - film_thickness*(n + 0.5)/n_layers
+        pc_layer = mp.Block(size=mp.Vector3(layer_d, film_height, 1e20),
+                            center = mp.Vector3(x, 0, 0),
+                            material = mp.Medium(epsilon = n_other**2))
+
+        layers.append(pc_layer)
+
+    return layers
+    
+def geo2D_spherical_pc(n_matrix, n_substrate, film_thickness, substrate_thickness, film_height,
+                        n_layers, film_base, 
                         sph_radius, sph_spacing, layer_offset):
     """
     Generate a layered structure with spheres. Within a layer the spheres are hexagonally packed
     """
-    matrix_block = mp .Block(size=mp.Vector3(film_thickness, film_height, 1e20),
-                            center = mp.Vector3(substrate_base-substrate_thickness-film_thickness/2),
+    matrix_block = mp.Block(size=mp.Vector3(film_thickness, film_height, 1e20),
+                            center = mp.Vector3(film_base-film_thickness/2),
                             material = mp.Medium(epsilon = n_matrix**2))
 
-    sub_block = mp.Block(size = mp.Vector3(substrate_thickness, film_height, 1e20),
-                         center = mp.Vector3(substrate_base-substrate_thickness/2,0,0),
-                         material = n_substrate**2)
+    si_block = mp.Block(size=mp.Vector3(substrate_thickness, film_height, 1e20),
+                        center = mp.Vector3(film_base+substrate_thickness/2,0,0),
+                        material = mp.Medium(epsilon = n_substrate**2))
 
-    spheres = [matrix_block]
+    print(n_substrate)
+    
+    spheres = [si_block, matrix_block]
     #spheres = []
     
     for n in range(n_layers):
-        x = substrate_base - substrate_thickness - film_thickness*(n/n_layers + 1/12)
+        x = film_base - film_thickness*(n + 0.5)/n_layers
         offset = layer_offset[n]
         num_spheres = int(film_height / sph_spacing)
         sphere_layer = [mp.Sphere(radius=sph_radius, center=mp.Vector3(x, y+offset - film_height/2, 0),
@@ -43,9 +81,29 @@ def geo2D_spherical_pc(n_matrix, n_substrate, film_thickness, film_height,
                                                                                       num_spheres)]
         spheres = spheres + sphere_layer
 
-    return spheres 
+    return spheres
 
-t_check = "Hello"
+def print_settings(params):
+
+    print("Simulation User Parameters\n\n")
+
+    for k in params.__dict__.keys():
+        print("{:s}:\t{:s}".format(k, str(params.__dict__[k])))
+    """
+    print("")
+    print("CELL_WIDTH:\t\t{:d}".format(params.cell_width))
+    print("CELL_HEIGHT:\t\t{:d}".format(params.cell_height))
+    print("RESOLUTION:\t\t{:f}".format(params.resolution))
+    print("DPML:\t\t{:d}".format(params.dpml))
+    print("TIME:\t\t{:d}".format(params.time))
+    print("DT:\t\t{:d}".format(params.dt))
+    print("Frequency:\t\t{:f}".format(params.freq))
+    print("Wavelength:\t\t{:f}".format(params.wavelength))
+
+    print("PS Thickness:\t\t{:f}".format(params.ps_thickness))
+    print("Si Thickness:\t\t{:f}".format(params.si_thickness))
+    """
+
     
 class SimParams:
     def __init__(self, **kwargs):
