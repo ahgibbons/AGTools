@@ -1,0 +1,17 @@
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/__init__.py
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Optics/MaterialParams.py
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Optics/raytrace.py
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Optics/__init__.py
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Optics/MeepLib.py
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Optics/BraggStackModel.py
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Spectrometer/__init__.py
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Spectrometer/parseSpectral.py
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/__pycache__/__init__.cpython-36.pyc
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Optics/__pycache__/MaterialParams.cpython-36.pyc
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Optics/__pycache__/raytrace.cpython-36.pyc
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Optics/__pycache__/__init__.cpython-36.pyc
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Optics/__pycache__/MeepLib.cpython-36.pyc
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Optics/__pycache__/BraggStackModel.cpython-36.pyc
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Spectrometer/__pycache__/__init__.cpython-36.pyc
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools/Spectrometer/__pycache__/parseSpectral.cpython-36.pyc
+/home/andrew/miniconda/envs/pmp/lib/python3.6/site-packages/AGTools-1.0-py3.6.egg-info

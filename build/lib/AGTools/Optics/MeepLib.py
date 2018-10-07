@@ -52,6 +52,34 @@ def geo2D_photonic_crystal(n_matrix, n_other, film_thickness, film_height, si_th
         layers.append(pc_layer)
 
     return layers
+
+def geo3D_photonic_crystal(n_matrix, n_other, film_thickness, filmx, filmy, si_thickness, n_si,
+                           n_layers, film_base, layer_d):
+    """
+    Generate a layered structure with alternating layers. Design is to make equivalent structure to 
+    'geo2D_spherical_pc'. 
+    """
+
+    matrix_block = mp.Block(size=mp.Vector3(filmx, filmy, film_thickness),
+                            center = mp.Vector3(0,0,film_base-film_thickness/2),
+                            material = mp.Medium(epsilon = n_matrix**2))
+
+    si_block = mp.Block(size=mp.Vector3(filmx, filmy, si_thickness),
+                        center = mp.Vector3(0,0,film_base+si_thickness/2),
+                        material = mp.Medium(epsilon = n_si**2))
+
+    layers = [si_block, matrix_block]
+
+    for n in range(n_layers):
+        z = film_base - film_thickness*(n + 0.5)/n_layers
+        pc_layer = mp.Block(size=mp.Vector3(filmx, filmy, layer_d),
+                            center = mp.Vector3(0,0,z),
+                            material = mp.Medium(epsilon = n_other**2))
+
+        layers.append(pc_layer)
+
+    return layers
+
     
 def geo2D_spherical_pc(n_matrix, n_substrate, film_thickness, substrate_thickness, film_height,
                         n_layers, film_base, 
